@@ -1,4 +1,6 @@
-import headerFooterStrings as strs
+from GraphMLWriter import GraphMLWriter
+from VisJSWriter import VisJSWriter
+from os import path
 
 class Node:
 	def __init__(self, parentList):
@@ -7,42 +9,29 @@ class Node:
 		self.parents = "none"
 		if len(parentList) > 1:
 			self.parents = parentList[:-1]
-		self.colors = ["#0059b3","#0080ff","#3399ff","#66b3ff","#99ccff","#cce6ff","#ffffff"]
-	def getGraphMLString(self):
-		return '''
-		 <node id="'''+self.name+'''">
-	      <data key="d1">
-	        <y:ShapeNode>
-	          <y:Fill color="'''+self.colors[len(self.parents)]+'''" transparent="false"/>
-	          <y:NodeLabel>'''+self.name+'''</y:NodeLabel>
-	        </y:ShapeNode>
-	      </data>
-	    </node>
-	    '''
-    def getVisJSString(self):
-    	return "    {id: "+self.id+", label: '"+self.name+"'},"
 
 class Edge:
 	def __init__(self,source,destination):
 		self.source = source
 		self.destination = destination
-	def getGraphMLString(self):	
-		return '<edge id="'+self.source+self.destination+'" source="'+self.destination+'" target="'+self.source+'"/>'
-
+	
 class CSVGraphParser:
-	def __init__(self,inputFile,outputFile,mode):
+	def __init__(self,inputFilePath,mode):
 		self.nodes = []
 		self.edges = []
-		self.fileContent = []	
-		self.readInCSV(inputFile)
+		self.fileContent = []
+		head, ext = path.splitext(inputFilePath)
+		self.readFile(inputFilePath)
 		self.createNodes()
 		self.createEdges()
 		if mode.lower() == "graphml":
-			self.writeOutToGraphMLFile(outputFile)
+			writer = GraphMLWriter(self.nodes,self.edges,head+".graphml")
+			print "Created file: "+head+".graphml ("+str(len(self.nodes))+" nodes, "+str(len(self.edges))+" edges)"
 		if mode.lower() == "visjs":
-			self.writeOutToVisJSFile(outputFile)
+			writer = VisJSWriter(self.nodes,self.edges,head+".html")
+			print "Created file: "+head+".html ("+str(len(self.nodes))+" nodes, "+str(len(self.edges))+" edges)"
 
-	def readInCSV(self,inputFile):
+	def readFile(self,inputFile):
 		for line in open(inputFile, 'r'):
 			self.fileContent.append(line.strip().split(","))
 			
@@ -53,22 +42,19 @@ class CSVGraphParser:
 	def createEdges(self):
 		for node in self.nodes:
 			if node.parents != "none":
-				self.edges.append(Edge(node.name,node.parents[-1]))
+				e = Edge(node,self.getNodeByName(node.parents[-1]))
+				self.edges.append(e)
 
-	def writeOutToGraphMLFile(self,outputFile):
-		outfile = open(outputFile,"w")
-		outfile.write(strs.GraphMLHeaderString)
-		for node in self.nodes:
-			outfile.write(node.getGraphMLString())
-		for edge in self.edges:
-			outfile.write(edge.getGraphMLString()+"\n")
-		outfile.write(strs.GraphMLFooterString)
-		outfile.close()
-
-	def nodeAlreadyExists(self,newNode):
+	def doesNodeExist(self,newNode):
 		for node in self.nodes:
 			if ((node.name == newNode.name) and (node.parents == newNode.parents)):
 				return True
+		return False
+
+	def getNodeByName(self,nodeName):
+		for node in self.nodes:
+			if node.name == nodeName:
+				return node
 		return False
 
 	def createNodesFromParentString(self,parentList):
@@ -76,11 +62,11 @@ class CSVGraphParser:
 			 return
 		if(len(parentList) > 0):
 			newNode = Node(parentList)
-			if not(self.nodeAlreadyExists(newNode)):
+			if not(self.doesNodeExist(newNode)):
 				self.nodes.append(newNode)
 				self.createNodesFromParentString(parentList[:-1])
-				print("Creating Node: " + newNode.name)
 
-myParser = CSVGraphParser("/Users/lpberg/Desktop/L1L2.csv","/Users/lpberg/Desktop/outfile.graphml","GraphML")
+myParser = CSVGraphParser("/Users/lpberg/Desktop/SampleInput.csv","visjs")
+#myParser = CSVGraphParser("/Users/lpberg/Desktop/SampleInput.csv","graphml")
 
 
