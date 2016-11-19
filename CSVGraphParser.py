@@ -19,6 +19,8 @@ class Node:
 	      </data>
 	    </node>
 	    '''
+    def getVisJSString(self):
+    	return "    {id: "+self.id+", label: '"+self.name+"'},"
 
 class Edge:
 	def __init__(self,source,destination):
